@@ -65,6 +65,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   
   func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
     
+    UNUserNotificationCenter.current().delegate = self
     guard let aps = userInfo["aps"] as? [String: AnyObject] else {
       completionHandler(.failed)
       return
@@ -78,6 +79,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         [weak self] granted, error in
         print("Permission granted: \(granted)") // 3
         guard granted else {return}
+        
+        // 1
+        let viewAction = UNNotificationAction(
+          identifier: Identifiers.viewAction,
+          title: "View",
+          options: [.foreground])
+
+        // 2
+        let newsCategory = UNNotificationCategory(
+          identifier: Identifiers.newsCategory,
+          actions: [viewAction],
+          intentIdentifiers: [],
+          options: [])
+
+        // 3
+        UNUserNotificationCenter.current().setNotificationCategories([newsCategory])
         self?.getNotificationSettings()
     }
   }
@@ -92,19 +109,43 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
   
-  func application(
-    _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-  ) {
+  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
     let token = tokenParts.joined()
     print("Device Token: \(token)")
   }
 
-  func application(
-    _ application: UIApplication,
-    didFailToRegisterForRemoteNotificationsWithError error: Error) {
+  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
     print("Failed to register: \(error)")
+  }
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void) {
+    
+    // 1
+    let userInfo = response.notification.request.content.userInfo
+    
+    // 2
+    if let aps = userInfo["aps"] as? [String: AnyObject],
+      let newsItem = NewsItem.makeNewsItem(aps) {
+      
+      (window?.rootViewController as? UITabBarController)?.selectedIndex = 1
+      
+      // 3
+      if response.actionIdentifier == Identifiers.viewAction,
+        let url = URL(string: newsItem.link) {
+        let safari = SFSafariViewController(url: url)
+        window?.rootViewController?.present(safari, animated: true,
+                                            completion: nil)
+      }
+    }
+    
+    // 4
+    completionHandler()
   }
 }
 
