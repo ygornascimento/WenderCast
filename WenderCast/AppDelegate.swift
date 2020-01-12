@@ -48,20 +48,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     registerForPushNotifications()
     
-    // Check if launched from notification
-    let notificationOption = launchOptions?[.remoteNotification]
-
-    // 1
-    if let notification = notificationOption as? [String: AnyObject],
-      let aps = notification["aps"] as? [String: AnyObject] {
-      
-      // 2
-      NewsItem.makeNewsItem(aps)
-      
-      // 3
-      (window?.rootViewController as? UITabBarController)?.selectedIndex = 1
-    }
-    
     return true
   }
   
@@ -72,6 +58,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       return
     }
     NewsItem.makeNewsItem(aps)
+    
+  }
+  
+  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+    let token = tokenParts.joined()
+    print("Device Token: \(token)")
+  }
+
+  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    print("Failed to register: \(error)")
   }
   
   func registerForPushNotifications() {
@@ -106,40 +103,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
   
-  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
-    let token = tokenParts.joined()
-    print("Device Token: \(token)")
-  }
-
-  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-    print("Failed to register: \(error)")
-  }
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
   func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-
-    // 1
+    
     let userInfo = response.notification.request.content.userInfo
-
-    // 2
+    
     if let aps = userInfo["aps"] as? [String: AnyObject],
-      let newsItem = NewsItem.makeNewsItem(aps) {
-
-      (window?.rootViewController as? UITabBarController)?.selectedIndex = 1
-
-      // 3
-      if response.actionIdentifier == Identifiers.viewAction,
-        let url = URL(string: newsItem.link) {
-        let safari = SFSafariViewController(url: url)
-        window?.rootViewController?.present(safari, animated: true,
-                                            completion: nil)
+      let newsItem = NewsItem.makeNewsItem(aps),
+      let url = URL(string: newsItem.link) {
+        
+      let safari = SFSafariViewController(url: url)
+      window?.rootViewController?.present(safari, animated: true, completion: nil)
       }
-    }
-
-    // 4
-    completionHandler()
+      completionHandler()
+  }
+  
+  func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    completionHandler([.alert, .badge, .sound])
   }
 }
 
