@@ -44,6 +44,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     UITabBar.appearance().barTintColor = UIColor.themeGreenColor
     UITabBar.appearance().tintColor = UIColor.white
     
+    UNUserNotificationCenter.current().delegate = self
+    
     registerForPushNotifications()
     
     // Check if launched from notification
@@ -65,7 +67,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   
   func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
     
-    UNUserNotificationCenter.current().delegate = self
     guard let aps = userInfo["aps"] as? [String: AnyObject] else {
       completionHandler(.failed)
       return
@@ -74,26 +75,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
   
   func registerForPushNotifications() {
-    UNUserNotificationCenter.current() // 1
-      .requestAuthorization(options: [.alert, .sound, .badge]) { // 2
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
         [weak self] granted, error in
-        print("Permission granted: \(granted)") // 3
+        print("Permission granted: \(granted)")
         guard granted else {return}
         
-        // 1
         let viewAction = UNNotificationAction(
           identifier: Identifiers.viewAction,
           title: "View",
           options: [.foreground])
 
-        // 2
         let newsCategory = UNNotificationCategory(
           identifier: Identifiers.newsCategory,
           actions: [viewAction],
           intentIdentifiers: [],
           options: [])
 
-        // 3
         UNUserNotificationCenter.current().setNotificationCategories([newsCategory])
         self?.getNotificationSettings()
     }
@@ -121,20 +118,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
-  func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    didReceive response: UNNotificationResponse,
-    withCompletionHandler completionHandler: @escaping () -> Void) {
-    
+  func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+
     // 1
     let userInfo = response.notification.request.content.userInfo
-    
+
     // 2
     if let aps = userInfo["aps"] as? [String: AnyObject],
       let newsItem = NewsItem.makeNewsItem(aps) {
-      
+
       (window?.rootViewController as? UITabBarController)?.selectedIndex = 1
-      
+
       // 3
       if response.actionIdentifier == Identifiers.viewAction,
         let url = URL(string: newsItem.link) {
@@ -143,7 +137,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                                             completion: nil)
       }
     }
-    
+
     // 4
     completionHandler()
   }
