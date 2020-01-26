@@ -46,11 +46,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     UNUserNotificationCenter.current().delegate = self
     
+    //MARK: - NOTIFICATION STEP 1 - A request is sent to APNs for a device token via registerForRemoteNotifications.
     registerForPushNotifications()
     
     return true
   }
   
+  //MARK: - NOTIFICATION STEP 2.1 - APNs will return a device token to your app and call application(_:didRegisterForRemoteNotificationsWithDeviceToken:)
+  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+    let token = tokenParts.joined()
+    print("Device Token: \(token)")
+  }
+  
+  //MARK: - NOTIFICATION STEP 2.2 - Or emit an error message to application(_:didFailToRegisterForRemoteNotificationsWithError:)
+  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    print("Failed to register: \(error)")
+  }
+  
+  //notification
   func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
     
     guard let aps = userInfo["aps"] as? [String: AnyObject] else {
@@ -61,16 +75,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
   }
   
-  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
-    let token = tokenParts.joined()
-    print("Device Token: \(token)")
-  }
-
-  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-    print("Failed to register: \(error)")
-  }
-  
+  //notification
   func registerForPushNotifications() {
     UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
         [weak self] granted, error in
@@ -93,6 +98,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
   
+  //notification
   func getNotificationSettings() {
     UNUserNotificationCenter.current().getNotificationSettings { settings in
       print("Notification settings: \(settings)")
@@ -109,15 +115,24 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
   func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
     
     let userInfo = response.notification.request.content.userInfo
-    
-    if let aps = userInfo["aps"] as? [String: AnyObject],
-      let newsItem = NewsItem.makeNewsItem(aps),
-      let url = URL(string: newsItem.link) {
-        
-      let safari = SFSafariViewController(url: url)
-      window?.rootViewController?.present(safari, animated: true, completion: nil)
-      }
-      completionHandler()
+
+//    if let aps = userInfo["aps"] as? [String: AnyObject],
+//      let newsItem = NewsItem.makeNewsItem(aps),
+//      let url = URL(string: newsItem.link) {
+//
+//      let safari = SFSafariViewController(url: url)
+//      window?.rootViewController?.present(safari, animated: true, completion: nil)
+//      }
+//      completionHandler()
+
+    let notificationInfo: NSDictionary = userInfo as NSDictionary
+
+    if let url = URL(string: notificationInfo.value(forKey: "link_url") as? String ?? "https://google.com") {
+        let safari = SFSafariViewController(url: url)
+        window?.rootViewController?.present(safari, animated: true, completion: nil)
+    }
+
+    completionHandler()
   }
   
   func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
