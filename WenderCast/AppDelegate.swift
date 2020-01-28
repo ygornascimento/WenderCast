@@ -115,16 +115,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
   func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
     
     let userInfo = response.notification.request.content.userInfo
-
-//    if let aps = userInfo["aps"] as? [String: AnyObject],
-//      let newsItem = NewsItem.makeNewsItem(aps),
-//      let url = URL(string: newsItem.link) {
-//
-//      let safari = SFSafariViewController(url: url)
-//      window?.rootViewController?.present(safari, animated: true, completion: nil)
-//      }
-//      completionHandler()
-
     let notificationInfo: NSDictionary = userInfo as NSDictionary
 
     if let url = URL(string: notificationInfo.value(forKey: "link_url") as? String ?? "https://google.com") {
